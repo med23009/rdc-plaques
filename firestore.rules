@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonction pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est dans la même province
+    function isSameProvince(province) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.province == province;
+    }
+
+    // Règles pour la collection users
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+
+    // Règles pour la collection plaques
+    match /plaques/{plaqueId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        isSameProvince(resource.data.province)
+      );
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        isSameProvince(request.resource.data.province)
+      );
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        isSameProvince(resource.data.province)
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,8 +1,17 @@
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  orderBy, 
+  serverTimestamp,
+  where
+} from "firebase/firestore";
+import { db } from "./firebase";
 import type { PlaqueData, Plaque } from "../types"
 
 class PlaqueService {
-  private plaqueCounter = 1
-  private plaques: Plaque[] = []
+  private readonly plaquesCollection = collection(db, "plaques");
 
   generatePlaqueNumber(province: string, district: string): string {
     // Format: XXXX/YY/Z où:
@@ -41,33 +50,73 @@ class PlaqueService {
 
     const districtCode = district ? district.charAt(0).toUpperCase() : "A"
     const provinceCode = provinceCodes[province] || "00"
-    const sequentialNumber = String(this.plaqueCounter).padStart(4, "0")
-
-    this.plaqueCounter++
-
-    return `${sequentialNumber}/${provinceCode}/${districtCode}`
+    
+    // Obtenir le dernier numéro séquentiel
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    
+    return `${year}${month}/${provinceCode}/${districtCode}`;
   }
 
   async savePlaque(plaqueData: PlaqueData): Promise<Plaque> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const plaque: Plaque = {
-          id: Date.now().toString(),
-          ...plaqueData,
-          createdAt: new Date().toISOString(),
-        }
-        this.plaques.push(plaque)
-        resolve(plaque)
-      }, 500)
-    })
+    try {
+      const plaqueNumber = this.generatePlaqueNumber(plaqueData.province, plaqueData.district);
+      
+      const plaqueDoc = {
+        ...plaqueData,
+        plaqueNumber,
+        createdAt: serverTimestamp(),
+        status: "active"
+      };
+
+      const docRef = await addDoc(this.plaquesCollection, plaqueDoc);
+      
+      return {
+        id: docRef.id,
+        ...plaqueDoc,
+        createdAt: new Date().toISOString()
+      } as Plaque;
+    } catch (error) {
+      throw new Error("Erreur lors de la sauvegarde de la plaque");
+    }
   }
 
   async getPlaques(): Promise<Plaque[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(this.plaques)
-      }, 300)
-    })
+    try {
+      const q = query(
+        this.plaquesCollection,
+        orderBy("createdAt", "desc")
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString()
+      })) as Plaque[];
+    } catch (error) {
+      throw new Error("Erreur lors de la récupération des plaques");
+    }
+  }
+
+  async getPlaquesByProvince(province: string): Promise<Plaque[]> {
+    try {
+      const q = query(
+        this.plaquesCollection,
+        where("province", "==", province),
+        orderBy("createdAt", "desc")
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString()
+      })) as Plaque[];
+    } catch (error) {
+      throw new Error("Erreur lors de la récupération des plaques par province");
+    }
   }
 
   generateQRCode(plaqueNumber: string): string {

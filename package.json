@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "init-users": "tsx src/scripts/initUsers.ts"
   },
   "dependencies": {
     "firebase": "^11.8.1",
@@ -28,6 +29,7 @@
     "globals": "^15.9.0",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.4",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"

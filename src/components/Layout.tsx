@@ -50,6 +50,9 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">App DRC Plaques</p>
+              {user && (
+                <p className="text-xs text-gray-600">Connecté en tant que: {user.matricule}</p>
+              )}
             </div>
           </div>
         </div>
