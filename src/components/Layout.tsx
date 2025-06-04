@@ -32,7 +32,6 @@ export default function Layout({ children }: LayoutProps) {
     { name: "Accueil", path: "/" },
     { name: "Plaques", path: "/plaques" },
     { name: "Utilisateurs", path: "/utilisateurs" },
-    { name: "Départements", path: "/departements" },
   ]
 
   return (

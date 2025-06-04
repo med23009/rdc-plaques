@@ -9,7 +9,7 @@ import HomePage from "./pages/HomePage"
 import PlaquesPage from "./pages/PlaquesPage"
 import EditPlaquePage from "./pages/EditPlaquePage"
 import UsersPage from "./pages/UsersPage"
-import DepartmentsPage from "./pages/DepartmentsPage"
+//import DepartmentsPage from "./pages/DepartmentsPage"
 import Layout from "./components/Layout"
 import ChangePasswordPage from "./pages/ChangePasswordPage"
 //import PrivateRoute from "./components/PrivateRoute"
@@ -83,16 +83,6 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <UsersPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/departements"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <DepartmentsPage />
                 </Layout>
               </ProtectedRoute>
             }
