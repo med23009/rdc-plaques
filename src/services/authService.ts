@@ -135,6 +135,24 @@ class AuthService {
       }
     });
   }
+
+  async getCurrentUser(): Promise<UserData | null> {
+    try {
+      const user = this.auth.currentUser;
+      if (!user) return null;
+
+      const userDoc = await getDoc(doc(this.db, "users", user.uid));
+      if (!userDoc.exists()) return null;
+
+      return {
+        id: userDoc.id,
+        ...userDoc.data()
+      } as UserData;
+    } catch (error) {
+      console.error("Erreur lors de la récupération de l'utilisateur:", error);
+      return null;
+    }
+  }
 }
 
 export const authService = new AuthService();

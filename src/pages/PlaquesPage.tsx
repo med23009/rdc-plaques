@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useForm } from "../hooks/useForm"
 import { usePlaque } from "../hooks/usePlaque"
+import { useAuth } from "../context/AuthContext"
 //import { useDebounce } from "../hooks/useDebounce"
 import type { PlaqueData, ValidationRules } from "../types"
 
@@ -43,6 +44,7 @@ export default function PlaquesPage() {
   const [plaqueNumber, setPlaqueNumber] = useState<string>("")
   const [qrCode, setQrCode] = useState<string>("")
   //const [searchTerm, setSearchTerm] = useState<string>("")
+  const { user } = useAuth()
 
   //const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
@@ -63,6 +65,7 @@ export default function PlaquesPage() {
     handleBlur,
     handleSubmit,
     reset,
+    setValues,
   } = useForm<PlaqueData>(initialFormData, validationRules)
 
   const provinces: string[] = [
@@ -99,22 +102,40 @@ export default function PlaquesPage() {
     loadPlaques()
   }, [loadPlaques])
 
-  // Generate plaque number automatically when province or district changes
+  // Vérifier si tous les champs requis sont remplis
+  const areAllFieldsFilled = () => {
+    return (
+      formData.nom &&
+      formData.postNom &&
+      formData.prenom &&
+      formData.district &&
+      formData.territoire &&
+      formData.secteur &&
+      formData.village &&
+      formData.province &&
+      formData.nationalite &&
+      formData.adresse &&
+      formData.telephone &&
+      formData.email
+    );
+  };
+
+  // Generate plaque number automatically when all required fields are filled
   useEffect(() => {
-    if (formData.province && formData.district) {
-      const number = generatePlaqueNumber(formData.province, formData.district)
+    if (areAllFieldsFilled() && formData.province && formData.district) {
+      const number = generatePlaqueNumber(formData.province, formData.district);
       if (number) {
-        setPlaqueNumber(number)
+        setPlaqueNumber(number);
       }
     } else {
-      setPlaqueNumber("")
+      setPlaqueNumber("");
     }
-  }, [formData.province, formData.district, generatePlaqueNumber])
+  }, [formData, generatePlaqueNumber]);
 
-  // Generate QR code automatically when plaque number is generated
+  // Generate QR code automatically when all required fields are filled and plaque number is generated
   useEffect(() => {
     const generateQR = async () => {
-      if (plaqueNumber && formData.nom && formData.postNom && formData.prenom) {
+      if (areAllFieldsFilled() && plaqueNumber) {
         try {
           const qr = await generateQRCode(plaqueNumber, formData);
           if (qr) {
@@ -130,6 +151,16 @@ export default function PlaquesPage() {
 
     generateQR();
   }, [plaqueNumber, formData, generateQRCode]);
+
+  // Définir la province automatiquement pour les utilisateurs non-admin
+  useEffect(() => {
+    if (user && user.role !== 'admin' && user.province) {
+      setValues(prev => ({
+        ...prev,
+        province: user.province
+      }));
+    }
+  }, [user, setValues]);
 
   const onSubmit = async (data: PlaqueData): Promise<void> => {
     if (!plaqueNumber) {
@@ -277,15 +308,24 @@ export default function PlaquesPage() {
                   errors.province && touched.province ? "border-red-500" : ""
                 }`}
                 required
+                disabled={user?.role !== 'admin'}
               >
                 <option value="">Sélectionner la province</option>
-                {provinces.map((province) => (
-                  <option key={province} value={province}>
-                    {province}
+                {user?.role === 'admin' ? (
+                  provinces.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))
+                ) : (
+                  <option value={user?.province}>
+                    {user?.province}
                   </option>
-                ))}
+                )}
               </select>
-              {errors.province && touched.province && <p className="text-red-500 text-xs mt-1">{errors.province}</p>}
+              {errors.province && touched.province && (
+                <p className="text-red-500 text-xs mt-1">{errors.province}</p>
+              )}
             </div>
 
             {/* Autres champs similaires... */}
@@ -368,7 +408,7 @@ export default function PlaquesPage() {
 
         {/* Actions */}
         <div className="mt-8 flex flex-wrap gap-4 items-center">
-          {plaqueNumber && (
+          {plaqueNumber && areAllFieldsFilled() && (
             <div className="flex items-center gap-4">
               <div className="px-4 py-2 bg-gray-100 border rounded-md">
                 <span className="font-mono text-lg">{plaqueNumber}</span>
@@ -376,7 +416,7 @@ export default function PlaquesPage() {
 
               {qrCode && (
                 <div className="border rounded-md p-2">
-                  <img src={qrCode || "/placeholder.svg?height=64&width=64"} alt="QR Code" className="w-16 h-16" />
+                  <img src={qrCode} alt="QR Code" className="w-16 h-16" />
                 </div>
               )}
             </div>
@@ -386,7 +426,7 @@ export default function PlaquesPage() {
         <div className="mt-6">
           <button
             type="submit"
-            disabled={isSubmitting || !plaqueNumber}
+            disabled={isSubmitting || !plaqueNumber || !areAllFieldsFilled()}
             className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Enregistrement..." : "Enregistrer la plaque"}

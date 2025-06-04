@@ -14,6 +14,7 @@ import {
 import { db } from "./firebase";
 import type { PlaqueData, Plaque } from "../types"
 import QRCode from 'qrcode';
+import { authService } from "./authService";
 
 class PlaqueService {
   private readonly plaquesCollection = collection(db, "plaques");
@@ -66,6 +67,17 @@ class PlaqueService {
 
   async savePlaque(plaqueData: PlaqueData): Promise<Plaque> {
     try {
+      // Vérifier les permissions de l'utilisateur
+      const currentUser = await authService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error("Utilisateur non authentifié");
+      }
+
+      // Vérifier si l'utilisateur a le droit de créer une plaque pour cette province
+      if (currentUser.role !== 'admin' && currentUser.province !== plaqueData.province) {
+        throw new Error("Vous n'avez pas l'autorisation de créer une plaque pour cette province");
+      }
+
       const plaqueNumber = this.generatePlaqueNumber(plaqueData.province, plaqueData.district);
       
       // Générer le QR code
@@ -87,8 +99,8 @@ class PlaqueService {
         createdAt: new Date().toISOString(),
         updatedAt: ''
       } as Plaque;
-    } catch (error) {
-      throw new Error("Erreur lors de la sauvegarde de la plaque");
+    } catch (error: any) {
+      throw new Error(error.message || "Erreur lors de la sauvegarde de la plaque");
     }
   }
 

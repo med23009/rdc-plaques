@@ -29,13 +29,6 @@ export interface Plaque extends PlaqueData {
   createdAt: string
 }
 
-export interface Department {
-  id: string
-  name: string
-  province: string
-  description: string
-}
-
 export interface UserData {
   id: string
   matricule: string
