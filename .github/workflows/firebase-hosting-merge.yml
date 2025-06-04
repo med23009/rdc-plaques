@@ -17,4 +17,5 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RDC_PLAQUES_SYSTEM }}
           channelId: live
-          projectId: rdc-plaques-system
+          projectId: plaques-rdc-9d2e1
+          target: plaques-rdc-app

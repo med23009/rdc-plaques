@@ -1,18 +1,18 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { authService } from "../services/authService"
-import type { User, AuthContextType } from "../types"
+import type { User } from "../types"
+
+interface AuthContextType {
+  user: User | null
+  loading: boolean
+  error: string | null
+  login: (matricule: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
-}
 
 interface AuthProviderProps {
   children: ReactNode
@@ -24,63 +24,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((user: User | null) => {
+    const unsubscribe = authService.onAuthStateChanged((user) => {
       setUser(user)
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => unsubscribe()
   }, [])
 
-  const login = async (matricule: string, password: string): Promise<User> => {
+  const login = async (matricule: string, password: string) => {
     try {
-      setLoading(true)
       setError(null)
       const user = await authService.login(matricule, password)
       setUser(user)
-      return user
     } catch (error: any) {
       setError(error.message)
       throw error
-    } finally {
-      setLoading(false)
     }
   }
 
-  const logout = async (): Promise<void> => {
+  const logout = async () => {
     try {
-      setLoading(true)
+      setError(null)
       await authService.logout()
       setUser(null)
     } catch (error: any) {
       setError(error.message)
       throw error
-    } finally {
-      setLoading(false)
     }
   }
 
-  const changePassword = async (newPassword: string): Promise<void> => {
-    try {
-      setLoading(true)
-      setError(null)
-      await authService.changePassword(newPassword)
-    } catch (error: any) {
-      setError(error.message)
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const value: AuthContextType = {
+  const value = {
     user,
-    login,
-    logout,
-    changePassword,
     loading,
     error,
+    login,
+    logout,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth doit être utilisé à l'intérieur d'un AuthProvider")
+  }
+  return context
 }

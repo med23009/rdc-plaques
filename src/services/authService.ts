@@ -1,96 +1,60 @@
 import { 
   signInWithEmailAndPassword,
   signOut,
-  updatePassword,
-  onAuthStateChanged as firebaseOnAuthStateChanged,
-  User as FirebaseUser
+  onAuthStateChanged
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import type { User } from "../types"
+import type { UserData } from "../types";
 
 class AuthService {
-  private currentUser: User | null = null
-  private listeners: ((user: User | null) => void)[] = []
+  private auth = auth;
+  private db = db;
 
-  async login(matricule: string, password: string): Promise<User> {
+  async login(matricule: string, password: string): Promise<UserData> {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, `${matricule}@rdc-plaques.med`, password);
-      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      const email = `${matricule}@rdc-plaques.med`;
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+      const userDoc = await getDoc(doc(this.db, "users", userCredential.user.uid));
       
       if (!userDoc.exists()) {
-        throw new Error("Utilisateur non trouvé dans la base de données");
+        throw new Error("Document utilisateur non trouvé");
       }
 
-      const userData = userDoc.data() as User;
-      this.currentUser = userData;
-      this.notifyListeners(userData);
-      return userData;
-    } catch (error) {
-      throw new Error("Matricule ou mot de passe incorrect");
+      return userDoc.data() as UserData;
+    } catch (error: any) {
+      if (error.code === "auth/user-not-found") {
+        throw new Error("Utilisateur non trouvé");
+      }
+      if (error.code === "auth/wrong-password") {
+        throw new Error("Mot de passe incorrect");
+      }
+      throw error;
     }
   }
 
   async logout(): Promise<void> {
     try {
-      await signOut(auth);
-      this.currentUser = null;
-      this.notifyListeners(null);
+      await signOut(this.auth);
     } catch (error) {
       throw new Error("Erreur lors de la déconnexion");
     }
   }
 
-  async changePassword(newPassword: string): Promise<void> {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error("Aucun utilisateur connecté");
-      }
-
-      await updatePassword(user, newPassword);
-      
-      if (this.currentUser) {
-        const userRef = doc(db, "users", user.uid);
-        await setDoc(userRef, { 
-          ...this.currentUser,
-          firstLogin: false 
-        }, { merge: true });
-        
-        this.currentUser.firstLogin = false;
-        this.notifyListeners(this.currentUser);
-      }
-    } catch (error) {
-      throw new Error("Erreur lors du changement de mot de passe");
-    }
-  }
-
-  onAuthStateChanged(callback: (user: User | null) => void): () => void {
-    this.listeners.push(callback);
-    
-    const unsubscribe = firebaseOnAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+  onAuthStateChanged(callback: (user: UserData | null) => void): () => void {
+    return onAuthStateChanged(this.auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+        const userDoc = await getDoc(doc(this.db, "users", firebaseUser.uid));
         if (userDoc.exists()) {
-          const userData = userDoc.data() as User;
-          this.currentUser = userData;
-          callback(userData);
+          callback(userDoc.data() as UserData);
+        } else {
+          callback(null);
         }
       } else {
-        this.currentUser = null;
         callback(null);
       }
     });
-
-    return () => {
-      this.listeners = this.listeners.filter((listener) => listener !== callback);
-      unsubscribe();
-    };
-  }
-
-  private notifyListeners(user: User | null): void {
-    this.listeners.forEach((listener) => listener(user));
   }
 }
 
-export const authService = new AuthService()
+export const authService = new AuthService();

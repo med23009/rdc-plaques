@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "plaques-rdc",
+    "site": "plaques-rdc-app",
     "public": "dist",
     "ignore": [
       "firebase.json",
@@ -12,7 +12,9 @@
         "source": "**",
         "destination": "/index.html"
       }
-    ]
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false
   },
   "firestore": {
     "rules": "firestore.rules",

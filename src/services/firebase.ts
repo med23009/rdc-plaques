@@ -5,13 +5,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAQPJBLhIOiV9uiDnOoi9wHvIflN9I2tws",
-  authDomain: "rdc-plaques-system.firebaseapp.com",
-  projectId: "rdc-plaques-system",
-  storageBucket: "rdc-plaques-system.firebasestorage.app",
-  messagingSenderId: "1060759632726",
-  appId: "1:1060759632726:web:bdcc3c9425317ab16e74f7",
-  measurementId: "G-PGR5FXE0WV"
+  apiKey: "AIzaSyAXrkCOwGWIQwXSAVWEFqlqH8lZXXovKuU",
+  authDomain: "plaques-rdc-9d2e1.firebaseapp.com",
+  projectId: "plaques-rdc-9d2e1",
+  storageBucket: "plaques-rdc-9d2e1.firebasestorage.app",
+  messagingSenderId: "15966303389",
+  appId: "1:15966303389:web:ec58fc37517331839c1074",
+  measurementId: "G-SRT1YPME3Q"
 };
 
 // Initialize Firebase

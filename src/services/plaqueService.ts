@@ -5,7 +5,11 @@ import {
   query, 
   orderBy, 
   serverTimestamp,
-  where
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+  Timestamp
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { PlaqueData, Plaque } from "../types"
@@ -74,28 +78,45 @@ class PlaqueService {
       
       return {
         id: docRef.id,
-        ...plaqueDoc,
-        createdAt: new Date().toISOString()
+        ...plaqueDoc as any,
+        createdAt: new Date().toISOString(),
+        qrCode: '',
+        updatedAt: ''
       } as Plaque;
     } catch (error) {
       throw new Error("Erreur lors de la sauvegarde de la plaque");
     }
   }
 
-  async getPlaques(): Promise<Plaque[]> {
+  async getPlaques(province?: string): Promise<Plaque[]> {
     try {
-      const q = query(
+      let q = query(
         this.plaquesCollection,
         orderBy("createdAt", "desc")
       );
       
+      if (province) {
+        q = query(
+          this.plaquesCollection,
+          where("province", "==", province),
+          orderBy("createdAt", "desc")
+        );
+      }
+      
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString()
-      })) as Plaque[];
-    } catch (error) {
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt && data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : new Date().toISOString();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt
+        } as Plaque;
+      });
+    } catch (error: any) {
+      console.error("Erreur détaillée lors de la récupération des plaques:", error);
       throw new Error("Erreur lors de la récupération des plaques");
     }
   }
@@ -132,6 +153,37 @@ class PlaqueService {
       </svg>
     `)}`
   }
+
+  async updatePlaque(plaqueData: Plaque): Promise<Plaque> {
+    try {
+      const plaqueRef = doc(this.plaquesCollection, plaqueData.id);
+      
+      const updateData = {
+        ...plaqueData,
+        updatedAt: serverTimestamp()
+      };
+
+      await updateDoc(plaqueRef, updateData);
+      
+      return {
+        ...plaqueData,
+        updatedAt: new Date().toISOString()
+      } as Plaque;
+    } catch (error) {
+      throw new Error("Erreur lors de la mise à jour de la plaque");
+    }
+  }
+
+  async deletePlaque(plaqueId: string): Promise<void> {
+    try {
+      const plaqueRef = doc(this.plaquesCollection, plaqueId);
+      await deleteDoc(plaqueRef);
+    } catch (error) {
+      throw new Error("Erreur lors de la suppression de la plaque");
+    }
+  }
 }
 
 export const plaqueService = new PlaqueService()
+
+

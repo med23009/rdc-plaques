@@ -1,69 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useForm } from "../hooks/useForm"
+import { useNavigate, useParams, useLocation } from "react-router-dom"
 import { usePlaque } from "../hooks/usePlaque"
-//import { useDebounce } from "../hooks/useDebounce"
-import type { PlaqueData, ValidationRules } from "../types"
+import type { Plaque } from "../types"
 
-const validationRules: ValidationRules = {
-  nom: (value: string) => (!value ? "Le nom est requis" : ""),
-  postNom: (value: string) => (!value ? "Le post-nom est requis" : ""),
-  prenom: (value: string) => (!value ? "Le prénom est requis" : ""),
-  province: (value: string) => (!value ? "La province est requise" : ""),
-  district: (value: string) => (!value ? "Le district est requis" : ""),
-  telephone: (value: string) => {
-    if (!value) return "Le téléphone est requis"
-    if (!/^\+?[0-9\s-]{8,}$/.test(value)) return "Format de téléphone invalide"
-    return ""
-  },
-  email: (value: string) => {
-    if (!value) return "L'email est requis"
-    if (!/\S+@\S+\.\S+/.test(value)) return "Format d'email invalide"
-    return ""
-  },
-}
-
-const initialFormData: PlaqueData = {
-  nom: "",
-  postNom: "",
-  prenom: "",
-  district: "",
-  territoire: "",
-  secteur: "",
-  village: "",
-  province: "",
-  nationalite: "",
-  adresse: "",
-  telephone: "",
-  email: "",
-}
-
-export default function PlaquesPage() {
-  const [plaqueNumber, setPlaqueNumber] = useState<string>("")
-  const [qrCode, setQrCode] = useState<string>("")
-  //const [searchTerm, setSearchTerm] = useState<string>("")
-
-  //const debouncedSearchTerm = useDebounce(searchTerm, 300)
-
-  const {
-    generatePlaqueNumber,
-    generateQRCode,
-    savePlaque,
-    loadPlaques,
-    error: plaqueError,
-  } = usePlaque()
-
-  const {
-    values: formData,
-    errors,
-    touched,
-    isSubmitting,
-    handleChange,
-    handleBlur,
-    handleSubmit,
-    reset,
-  } = useForm<PlaqueData>(initialFormData, validationRules)
+export default function EditPlaquePage() {
+  const { id } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { updatePlaque } = usePlaque()
+  const [formData, setFormData] = useState<Plaque | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   const provinces: string[] = [
     "Kinshasa",
@@ -94,63 +43,49 @@ export default function PlaquesPage() {
     "Tanganyika",
   ]
 
-  // Load plaques on component mount
   useEffect(() => {
-    loadPlaques()
-  }, [loadPlaques])
-
-  // Generate plaque number automatically when province or district changes
-  useEffect(() => {
-    if (formData.province && formData.district) {
-      const number = generatePlaqueNumber(formData.province, formData.district)
-      if (number) {
-        setPlaqueNumber(number)
-      }
+    if (location.state?.plaque) {
+      setFormData(location.state.plaque)
     } else {
-      setPlaqueNumber("")
+      navigate("/")
     }
-  }, [formData.province, formData.district, generatePlaqueNumber])
+  }, [location.state, navigate])
 
-  // Generate QR code automatically when plaque number is generated
-  useEffect(() => {
-    if (plaqueNumber) {
-      const qr = generateQRCode(plaqueNumber)
-      if (qr) {
-        setQrCode(qr)
-      }
-    } else {
-      setQrCode("")
-    }
-  }, [plaqueNumber, generateQRCode])
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!formData) return
+    const { name, value } = e.target
+    setFormData((prev) => prev ? { ...prev, [name]: value } : null)
+  }
 
-  const onSubmit = async (data: PlaqueData): Promise<void> => {
-    if (!plaqueNumber) {
-      alert("Veuillez générer un numéro de plaque")
-      return
-    }
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!formData) return
+
+    setIsSubmitting(true)
+    setFormError(null)
 
     try {
-      await savePlaque(data)
-      alert("Plaque enregistrée avec succès!")
-
-      // Reset form and generated data
-      reset()
-      setPlaqueNumber("")
-      setQrCode("")
+      await updatePlaque(formData)
+      navigate("/")
     } catch (error) {
-      alert("Erreur lors de l'enregistrement")
+      setFormError("Une erreur est survenue lors de la modification de la plaque")
+      console.error("Erreur lors de la modification:", error)
+    } finally {
+      setIsSubmitting(false)
     }
+  }
+
+  if (!formData) {
+    return <div>Chargement...</div>
   }
 
   return (
     <div className="space-y-6">
-
-      {/* Error Display */}
-      {plaqueError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{plaqueError}</div>
+      {formError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{formError}</div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg shadow p-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Informations personnelles */}
           <div className="space-y-4">
@@ -161,13 +96,9 @@ export default function PlaquesPage() {
                 name="nom"
                 value={formData.nom}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.nom && touched.nom ? "border-red-500" : "border-gray-300"
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-              {errors.nom && touched.nom && <p className="text-red-500 text-xs mt-1">{errors.nom}</p>}
             </div>
 
             <div>
@@ -177,13 +108,9 @@ export default function PlaquesPage() {
                 name="postNom"
                 value={formData.postNom}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.postNom && touched.postNom ? "border-red-500" : "border-gray-300"
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-              {errors.postNom && touched.postNom && <p className="text-red-500 text-xs mt-1">{errors.postNom}</p>}
             </div>
 
             <div>
@@ -193,13 +120,9 @@ export default function PlaquesPage() {
                 name="prenom"
                 value={formData.prenom}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.prenom && touched.prenom ? "border-red-500" : "border-gray-300"
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-              {errors.prenom && touched.prenom && <p className="text-red-500 text-xs mt-1">{errors.prenom}</p>}
             </div>
 
             <div>
@@ -208,10 +131,7 @@ export default function PlaquesPage() {
                 name="district"
                 value={formData.district}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 ${
-                  errors.district && touched.district ? "border-red-500" : ""
-                }`}
+                className="w-full px-3 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
                 required
               >
                 <option value="">Sélectionner le district</option>
@@ -220,7 +140,6 @@ export default function PlaquesPage() {
                 <option value="Mont-Amba">Mont-Amba</option>
                 <option value="Tshangu">Tshangu</option>
               </select>
-              {errors.district && touched.district && <p className="text-red-500 text-xs mt-1">{errors.district}</p>}
             </div>
 
             <div>
@@ -230,13 +149,9 @@ export default function PlaquesPage() {
                 name="telephone"
                 value={formData.telephone}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.telephone && touched.telephone ? "border-red-500" : "border-gray-300"
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-              {errors.telephone && touched.telephone && <p className="text-red-500 text-xs mt-1">{errors.telephone}</p>}
             </div>
 
             <div>
@@ -246,13 +161,9 @@ export default function PlaquesPage() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.email && touched.email ? "border-red-500" : "border-gray-300"
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-              {errors.email && touched.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
           </div>
 
@@ -264,10 +175,7 @@ export default function PlaquesPage() {
                 name="province"
                 value={formData.province}
                 onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 ${
-                  errors.province && touched.province ? "border-red-500" : ""
-                }`}
+                className="w-full px-3 py-2 bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
                 required
               >
                 <option value="">Sélectionner la province</option>
@@ -277,10 +185,8 @@ export default function PlaquesPage() {
                   </option>
                 ))}
               </select>
-              {errors.province && touched.province && <p className="text-red-500 text-xs mt-1">{errors.province}</p>}
             </div>
 
-            {/* Autres champs similaires... */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Territoire</label>
               <select
@@ -358,33 +264,39 @@ export default function PlaquesPage() {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Affichage du numéro de plaque et QR code */}
         <div className="mt-8 flex flex-wrap gap-4 items-center">
-          {plaqueNumber && (
-            <div className="flex items-center gap-4">
-              <div className="px-4 py-2 bg-gray-100 border rounded-md">
-                <span className="font-mono text-lg">{plaqueNumber}</span>
-              </div>
-
-              {qrCode && (
-                <div className="border rounded-md p-2">
-                  <img src={qrCode || "/placeholder.svg?height=64&width=64"} alt="QR Code" className="w-16 h-16" />
-                </div>
-              )}
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 bg-gray-100 border rounded-md">
+              <span className="font-mono text-lg">{formData.plaqueNumber}</span>
             </div>
-          )}
+
+            {formData.qrCode && (
+              <div className="border rounded-md p-2">
+                <img src={formData.qrCode} alt="QR Code" className="w-16 h-16" />
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mt-6">
+        {/* Actions */}
+        <div className="mt-6 flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Annuler
+          </button>
           <button
             type="submit"
-            disabled={isSubmitting || !plaqueNumber}
+            disabled={isSubmitting}
             className="px-8 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Enregistrement..." : "Enregistrer la plaque"}
+            {isSubmitting ? "Modification en cours..." : "Enregistrer les modifications"}
           </button>
         </div>
       </form>
     </div>
   )
-}
+} 
