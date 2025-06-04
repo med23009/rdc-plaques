@@ -10,7 +10,7 @@ interface UsePlaqueReturn {
   loading: boolean
   error: string | null
   generatePlaqueNumber: (province: string, district: string) => string | null
-  generateQRCode: (plaqueNumber: string) => string | null
+  generateQRCode: (plaqueNumber: string, plaqueData: PlaqueData) => Promise<string | null>
   savePlaque: (plaqueData: PlaqueData) => Promise<Plaque>
   updatePlaque: (plaqueData: Plaque) => Promise<Plaque>
   loadPlaques: () => Promise<Plaque[]>
@@ -32,12 +32,12 @@ export function usePlaque(): UsePlaqueReturn {
     }
   }, [])
 
-  const generateQRCode = useCallback((plaqueNumber: string): string | null => {
+  const generateQRCode = useCallback((plaqueNumber: string, plaqueData: PlaqueData): Promise<string | null> => {
     try {
-      return plaqueService.generateQRCode(plaqueNumber)
+      return plaqueService.generateQRCode(plaqueNumber, plaqueData)
     } catch (error: any) {
       setError(error.message)
-      return null
+      return Promise.resolve(null)
     }
   }, [])
 

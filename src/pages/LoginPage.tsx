@@ -23,7 +23,11 @@ export default function LoginPage() {
       await login(matricule, password)
       navigate("/")
     } catch (error: any) {
-      setError(error.message)
+      if (error.message === "FIRST_LOGIN_REQUIRED") {
+        navigate("/change-password")
+      } else {
+        setError(error.message)
+      }
     } finally {
       setLoading(false)
     }

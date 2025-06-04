@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { PlaqueData, Plaque } from "../types"
+import QRCode from 'qrcode';
 
 class PlaqueService {
   private readonly plaquesCollection = collection(db, "plaques");
@@ -67,9 +68,13 @@ class PlaqueService {
     try {
       const plaqueNumber = this.generatePlaqueNumber(plaqueData.province, plaqueData.district);
       
+      // Générer le QR code
+      const qrCode = await this.generateQRCode(plaqueNumber, plaqueData);
+      
       const plaqueDoc = {
         ...plaqueData,
         plaqueNumber,
+        qrCode,
         createdAt: serverTimestamp(),
         status: "active"
       };
@@ -80,7 +85,6 @@ class PlaqueService {
         id: docRef.id,
         ...plaqueDoc as any,
         createdAt: new Date().toISOString(),
-        qrCode: '',
         updatedAt: ''
       } as Plaque;
     } catch (error) {
@@ -140,18 +144,39 @@ class PlaqueService {
     }
   }
 
-  generateQRCode(plaqueNumber: string): string {
-    // Simulation de génération de QR code
-    return `data:image/svg+xml;base64,${btoa(`
-      <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100" height="100" fill="white"/>
-        <rect x="10" y="10" width="80" height="80" fill="black"/>
-        <rect x="15" y="15" width="70" height="70" fill="white"/>
-        <text x="50" y="50" text-anchor="middle" dy=".3em" font-family="monospace" font-size="8">
-          ${plaqueNumber}
-        </text>
-      </svg>
-    `)}`
+  async generateQRCode(plaqueNumber: string, plaqueData: PlaqueData): Promise<string> {
+    try {
+      // Créer un objet avec les informations à encoder dans le QR code
+      const qrData = {
+        plaqueNumber,
+        nom: plaqueData.nom,
+        postNom: plaqueData.postNom,
+        prenom: plaqueData.prenom,
+        province: plaqueData.province,
+        district: plaqueData.district,
+        telephone: plaqueData.telephone,
+        email: plaqueData.email
+      };
+
+      // Convertir l'objet en chaîne JSON
+      const qrString = JSON.stringify(qrData);
+
+      // Générer le QR code en tant qu'URL de données
+      const qrCodeDataUrl = await QRCode.toDataURL(qrString, {
+        errorCorrectionLevel: 'H',
+        margin: 1,
+        width: 200,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+
+      return qrCodeDataUrl;
+    } catch (error) {
+      console.error('Erreur lors de la génération du QR code:', error);
+      throw new Error('Erreur lors de la génération du QR code');
+    }
   }
 
   async updatePlaque(plaqueData: Plaque): Promise<Plaque> {

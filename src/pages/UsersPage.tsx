@@ -6,6 +6,8 @@ import { useState, useEffect } from "react"
 import type { UserData } from "../types"
 import { useUsers } from "../hooks/useUsers"
 import { useAuth } from "../context/AuthContext"
+//import { authService } from "../services/authService"
+import { userService } from "../services/userService"
 
 export default function UsersPage() {
   const { users, loading, error, loadUsers, updateUser, deleteUser } = useUsers()
@@ -21,6 +23,8 @@ export default function UsersPage() {
     province: "",
     role: "user",
   })
+  const [formError, setFormError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [editingUser, setEditingUser] = useState<UserData | null>(null) // État pour l'utilisateur en cours d'édition
   const [showEditModal, setShowEditModal] = useState<boolean>(false) // État pour afficher/masquer le modal d'édition
@@ -59,16 +63,38 @@ export default function UsersPage() {
     loadUsers();
   }, [loadUsers]);
 
-  const handleAddUser = (e: React.FormEvent<HTMLFormElement>): void => {
-    e.preventDefault()
-    // TODO: Implement actual user creation in Firestore
-    console.log("Add user form submitted:", newUser)
-    // Temporairement, ajouter à l'état local pour voir l'affichage
-    // setUsers([...users, user]) // Ne pas ajouter directement à l'état local, laisser le hook gérer
-    setNewUser({ matricule: "", province: "", role: "user" })
-    setShowAddForm(false)
-    // Après la création réelle, recharger les utilisateurs: loadUsers();
-  }
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    setIsSubmitting(true);
+
+    try {
+      if (!newUser.matricule || !newUser.role || !newUser.province) {
+        throw new Error("Veuillez remplir tous les champs");
+      }
+
+      await userService.createUser(
+        newUser.matricule,
+        newUser.role,
+        newUser.province
+      );
+
+      // Recharger la liste des utilisateurs
+      await loadUsers();
+      
+      // Réinitialiser le formulaire
+      setNewUser({
+        matricule: "",
+        role: "user",
+        province: ""
+      });
+      setShowAddForm(false);
+    } catch (error: any) {
+      setFormError(error.message || "Erreur lors de la création de l'utilisateur");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Gérer le clic sur le bouton Modifier
   const handleEditClick = (user: UserData) => {
@@ -137,6 +163,12 @@ export default function UsersPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Nouvel utilisateur</h2>
           <form onSubmit={handleAddUser} className="space-y-4">
+            {formError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                {formError}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Matricule</label>
@@ -183,8 +215,12 @@ export default function UsersPage() {
             </div>
 
             <div className="flex gap-2">
-              <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-                Créer
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Création en cours..." : "Créer"}
               </button>
               <button
                 type="button"

@@ -3,6 +3,8 @@ export interface UserData {
   matricule: string;
   province: string;
   role: "admin" | "user";
+  status: "actif" | "inactif";
+  firstLogin: boolean;
 }
 
 export interface PlaqueData {

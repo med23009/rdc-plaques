@@ -1,9 +1,46 @@
-import { collection, getDocs, query, orderBy, where, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, where, doc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import type { UserData } from "../types";
+import { authService } from "./authService";
 
 class UserService {
   private readonly usersCollection = collection(db, "users");
+
+  async createUser(matricule: string, role: "admin" | "user", province: string): Promise<UserData> {
+    try {
+      // Vérifier si le matricule existe déjà
+      const existingUserQuery = query(
+        this.usersCollection,
+        where("matricule", "==", matricule)
+      );
+      const existingUserSnapshot = await getDocs(existingUserQuery);
+      
+      if (!existingUserSnapshot.empty) {
+        throw new Error("Ce matricule est déjà utilisé");
+      }
+
+      // Créer l'utilisateur dans Firebase Authentication
+      const firebaseUser = await authService.createFirebaseUser(matricule);
+
+      // Créer le nouvel utilisateur dans Firestore
+      const userData: UserData = {
+        id: firebaseUser.uid,
+        matricule,
+        role,
+        province,
+        firstLogin: true,
+        status: "actif"
+      };
+
+      // Créer le document dans Firestore avec l'ID de l'utilisateur Firebase
+      const userRef = doc(this.usersCollection, firebaseUser.uid);
+      await setDoc(userRef, userData);
+      
+      return userData;
+    } catch (error: any) {
+      throw new Error(error.message || "Erreur lors de la création de l'utilisateur");
+    }
+  }
 
   async getUsers(province?: string): Promise<UserData[]> {
     try {

@@ -11,6 +11,7 @@ import EditPlaquePage from "./pages/EditPlaquePage"
 import UsersPage from "./pages/UsersPage"
 import DepartmentsPage from "./pages/DepartmentsPage"
 import Layout from "./components/Layout"
+import ChangePasswordPage from "./pages/ChangePasswordPage"
 //import PrivateRoute from "./components/PrivateRoute"
 
 // Configuration des flags pour React Router v7
@@ -22,7 +23,7 @@ const routerConfig = {
 }
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 function ProtectedRoute({ children }: ProtectedRouteProps) {
@@ -32,7 +33,11 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <div className="flex items-center justify-center min-h-screen">Chargement...</div>
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" />
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
 }
 
 function App() {
@@ -41,6 +46,7 @@ function App() {
       <Router {...routerConfig}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route
             path="/"
             element={

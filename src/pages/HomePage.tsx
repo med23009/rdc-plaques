@@ -77,7 +77,7 @@ export default function HomePage() {
                     <p className="text-xs text-gray-500">{plaque.province}</p>
                   </div>
                   {plaque.qrCode && (
-                    <img src={plaque.qrCode} alt="QR Code" className="w-16 h-16" />
+                    <img src={plaque.qrCode} alt="QR Code" className="w-24 h-24" />
                   )}
                 </div>
                 <div className="mt-2 text-xs text-gray-500">

@@ -113,15 +113,23 @@ export default function PlaquesPage() {
 
   // Generate QR code automatically when plaque number is generated
   useEffect(() => {
-    if (plaqueNumber) {
-      const qr = generateQRCode(plaqueNumber)
-      if (qr) {
-        setQrCode(qr)
+    const generateQR = async () => {
+      if (plaqueNumber && formData.nom && formData.postNom && formData.prenom) {
+        try {
+          const qr = await generateQRCode(plaqueNumber, formData);
+          if (qr) {
+            setQrCode(qr);
+          }
+        } catch (error) {
+          console.error("Erreur lors de la génération du QR code:", error);
+        }
+      } else {
+        setQrCode("");
       }
-    } else {
-      setQrCode("")
-    }
-  }, [plaqueNumber, generateQRCode])
+    };
+
+    generateQR();
+  }, [plaqueNumber, formData, generateQRCode]);
 
   const onSubmit = async (data: PlaqueData): Promise<void> => {
     if (!plaqueNumber) {
