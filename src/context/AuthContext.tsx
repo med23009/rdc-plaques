@@ -2,10 +2,10 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { authService } from "../services/authService"
-import type { User } from "../types"
+import type { UserData } from "../types"
 
 interface AuthContextType {
-  user: User | null
+  user: UserData | null
   loading: boolean
   error: string | null
   login: (matricule: string, password: string) => Promise<void>
@@ -19,7 +19,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate, useParams, useLocation } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { usePlaque } from "../hooks/usePlaque"
 import type { Plaque } from "../types"
 
 export default function EditPlaquePage() {
-  const { id } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
   const { updatePlaque } = usePlaque()

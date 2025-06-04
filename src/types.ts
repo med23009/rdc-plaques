@@ -32,4 +32,19 @@ export interface Plaque extends PlaqueData {
 // Add ValidationRules interface
 export interface ValidationRules {
   [key: string]: (value: string) => string;
+}
+
+export interface FormErrors {
+  [key: string]: string;
+}
+
+export interface FormTouched {
+  [key: string]: boolean;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  province: string;
+  description: string;
 } 

@@ -34,7 +34,8 @@ class UserService {
   async updateUser(userData: UserData): Promise<UserData> {
     try {
       const userRef = doc(this.usersCollection, userData.id);
-      await updateDoc(userRef, userData);
+      const { id, ...dataToUpdate } = userData;
+      await updateDoc(userRef, dataToUpdate);
       return userData;
     } catch (error: any) {
       console.error("Erreur détaillée lors de la mise à jour de l'utilisateur:", error);

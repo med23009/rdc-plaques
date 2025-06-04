@@ -30,7 +30,7 @@ export function useForm<T extends Record<string, any>>(
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target
-      setValues((prev) => ({
+      setValues((prev: T) => ({
         ...prev,
         [name]: value,
       }))
@@ -49,7 +49,7 @@ export function useForm<T extends Record<string, any>>(
   const handleBlur = useCallback(
     (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const { name } = e.target
-      setTouched((prev) => ({
+      setTouched((prev: FormTouched) => ({
         ...prev,
         [name]: true,
       }))
